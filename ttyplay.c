@@ -101,7 +101,7 @@ ttywait (struct timeval prev, struct timeval cur, double speed)
      * Save "diff" since select(2) may overwrite it to {0, 0}. 
      */
     struct timeval orig_diff = diff;
-    select(1, &readfs, NULL, NULL, &diff);
+    select(1, &readfs, NULL, NULL,&diff);
     diff = orig_diff;  /* Restore the original diff value. */
     if (FD_ISSET(0, &readfs)) { /* a user hits a character? */
         char c;
@@ -129,6 +129,28 @@ ttywait (struct timeval prev, struct timeval cur, double speed)
         }
 	drift = timeval_diff(diff, timeval_diff(start, stop));
     }
+    return speed;
+}
+
+double
+ttykwait (struct timeval prev, struct timeval cur, double speed)
+{
+    struct timeval delay = { 0,100000 };
+    fd_set readfs;
+
+    FD_SET(STDIN_FILENO, &readfs);
+    select(1, &readfs, NULL, NULL, &delay);
+    if (FD_ISSET(0, &readfs)) { /* a user hits a character? */
+        char c;
+        read(STDIN_FILENO, &c, 1); /* drain the character */
+        if (c == ' ') {
+            do {
+                read(STDIN_FILENO,&c,1);
+            } while(c != ' ');
+        } else if (c == 'x') { 
+            speed = -1;
+        }
+    } 
     return speed;
 }
 
@@ -209,6 +231,8 @@ ttyplay (FILE *fp, double speed, ReadFunc read_func,
 	write_func(buf, h.len);
 	prev = h.tv;
 	free(buf);
+    if( speed == -1) 
+        break;
     }
 }
 
@@ -270,7 +294,7 @@ main (int argc, char **argv)
 
     set_progname(argv[0]);
     while (1) {
-        int ch = getopt(argc, argv, "s:np");
+        int ch = getopt(argc, argv, "s:npx:");
         if (ch == EOF) {
             break;
 	}
@@ -288,6 +312,9 @@ main (int argc, char **argv)
 	case 'p':
 	    process = ttypeek;
 	    break;
+    case 'x':
+	    wait_func = ttykwait;
+        break;
 	default:
 	    usage();
 	}
