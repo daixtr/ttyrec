@@ -294,7 +294,7 @@ main (int argc, char **argv)
 
     set_progname(argv[0]);
     while (1) {
-        int ch = getopt(argc, argv, "s:npx:");
+        int ch = getopt(argc, argv, "s:npx");
         if (ch == EOF) {
             break;
 	}
